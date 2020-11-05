@@ -45,10 +45,23 @@ async def on_ready():
     print(f"{client.user.name} Is Ready!")
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"Ready, made by Cypher_Guy#7831"))
 
+@client.event
+async def on_guild_channel_create(channel):
+  with open('whitelisted.json') as f:
+    whitelisted = json.load(f) #opens file
+
+  async for entry in channel.guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_create):
+    if whitelisted[str(entry.user.id)] is None:
+      await channel.guild.kick(entry.user, reason="Creating Channels")
+      await channel.send(f"The maker of this channel, {entry.user.mention}, was kicked, or at least I tried to..") 
+      return
+    else:      
+      return 
+
 @client.command()
 async def whitelisters(ctx):
 
-  embed = discord.Embed(title=f"Whitelist for {ctx.guild.name}", description="")
+  embed = discord.Embed(title=f"Whitelist for {ctx.guild.name}", description="", color = discord.Color.dark_blue())
 
   with open ('whitelisted.json', 'r') as i:
         whitelisted = json.load(i)
@@ -75,7 +88,6 @@ async def whitelist(ctx, user: discord.Member = None):
     await ctx.send(f"{user.mention} was successfully whitelisted.")
 
 @client.command(aliases = ['uwl'], hidden=True)
-@commands.check(is_server_owner)
 async def unwhitelist(ctx, user: discord.User = None):
     if user is None:
         await ctx.send("You must specify a user to unwhitelist.")
@@ -91,9 +103,8 @@ async def unwhitelist(ctx, user: discord.User = None):
       await ctx.send(f"{user.mention} was successfully unwhitelisted.")
     except KeyError:
       await ctx.send("This user was never whitelisted.")
-
 @client.command()
 async def info(ctx):
-    await ctx.send(embed=discord.Embed(title="Bot info", description=f"{len(client.guilds)} servers, {len(client.users)} users | Database is connected."))
+    await ctx.send(embed=discord.Embed(title="Bot info", description=f"{len(client.guilds)} servers, {len(client.users)} users :D"))
 
 client.run(YOUR_TOKEN)
