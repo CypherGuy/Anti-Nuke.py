@@ -94,6 +94,6 @@ async def unwhitelist(ctx, user: discord.User = None):
 
 @client.command()
 async def info(ctx):
-    await ctx.send(embed=discord.Embed(title="robbery info", description=f"{len(client.guilds)} servers, {len(client.users)} users | Database is connected."))
+    await ctx.send(embed=discord.Embed(title="Bot info", description=f"{len(client.guilds)} servers, {len(client.users)} users | Database is connected."))
 
 client.run(YOUR_TOKEN)
