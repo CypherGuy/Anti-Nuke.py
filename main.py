@@ -22,11 +22,6 @@ def get_prefix(client, ctx):
 
 client = commands.Bot(command_prefix= get_prefix, intents = intents)
 
-client.add_cog(AntiChannel(client))
-client.add_cog(AntiRemoval(client))
-client.add_cog(AntiRole(client))
-client.add_cog(Diagnostics(client))
-
 @client.event
 async def on_guild_join(guild):
     with open ('prefixes.json', 'r') as f:
