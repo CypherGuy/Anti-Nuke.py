@@ -9,6 +9,10 @@ intents = discord.Intents.default()
 intents.members = True
 intents.guilds = True
 
+
+def is_server_owner(ctx):
+    return ctx.message.author.id == ctx.guild.owner.id
+
 def get_prefix(client, ctx):
     with open ('prefixes.json', 'r') as f:
         prefixes = json.load(f)
@@ -17,6 +21,11 @@ def get_prefix(client, ctx):
     return prefixes[str(ctx.guild.id)]
 
 client = commands.Bot(command_prefix= get_prefix, intents = intents)
+
+client.add_cog(AntiChannel(client))
+client.add_cog(AntiRemoval(client))
+client.add_cog(AntiRole(client))
+client.add_cog(Diagnostics(client))
 
 @client.event
 async def on_guild_join(guild):
@@ -40,46 +49,39 @@ async def on_guild_remove(guild):
      with open ('prefixes.json', 'w') as f: 
          json.dump(prefixes , f, indent=4)
 
-@client.event
-async def on_ready():
-    print(f"{client.user.name} Is Ready!")
-    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"Ready, made by Cypher_Guy#7831"))
-
-@client.event
-async def on_guild_channel_create(channel):
-  with open('whitelisted.json') as f:
-    whitelisted = json.load(f) #opens file
-
-  async for entry in channel.guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_create):
-    if whitelisted[str(entry.user.id)] is None:
-      await channel.guild.kick(entry.user, reason="Creating Channels")
-      await channel.send(f"The maker of this channel, {entry.user.mention}, was kicked, or at least I tried to..") 
-      return
-    else:      
-      return 
-
-@client.command()
+@client.command(aliases = ['wld'], hidden=True)
 async def whitelisters(ctx):
 
-  embed = discord.Embed(title=f"Whitelist for {ctx.guild.name}", description="", color = discord.Color.dark_blue())
+  embed = discord.Embed(title=f"Whitelist for {ctx.guild.name}", description="")
 
   with open ('whitelisted.json', 'r') as i:
         whitelisted = json.load(i)
+  try:
+    for u in whitelisted[str(ctx.guild.id)]:
+      embed.description += f"<@{(u)}> - {u}\n"
+    await ctx.send(embed = embed)
+  except KeyError:
+    await ctx.send("Nothing found for this guild!")
 
-  for i in whitelisted:
-    embed.description += f"<@{(i)}> - {i}\n"
-
-  await ctx.send(embed = embed)
 
 @client.command(aliases = ['wl'], hidden=True)
 async def whitelist(ctx, user: discord.Member = None):
     if user is None:
         await ctx.send("You must specify a user to whitelist.")
+        return
     with open ('whitelisted.json', 'r') as f:
         whitelisted = json.load(f)
 
 
-    whitelisted[str(user.id)] = {}
+    if str(ctx.guild.id) not in whitelisted:
+      whitelisted[str(ctx.guild.id)] = []
+    else:
+      if str(user.id) not in whitelisted[str(ctx.guild.id)]:
+        whitelisted[str(ctx.guild.id)].append(str(user.id))
+      else:
+        await ctx.send("User is already whitelisted")
+        return
+
 
 
     with open ('whitelisted.json', 'w') as f: 
@@ -89,22 +91,20 @@ async def whitelist(ctx, user: discord.Member = None):
 
 @client.command(aliases = ['uwl'], hidden=True)
 async def unwhitelist(ctx, user: discord.User = None):
-    if user is None:
-        await ctx.send("You must specify a user to unwhitelist.")
-    with open ('whitelisted.json', 'r') as f:
-        whitelisted = json.load(f)
-    try:
-      del whitelisted[f"{user.id}"]
-
-
+  if user is None:
+      await ctx.send("You must specify a user to unwhitelist.")
+      return
+  with open ('whitelisted.json', 'r') as f:
+      whitelisted = json.load(f)
+  try:
+    if str(user.id) in whitelisted[str(ctx.guild.id)]:
+      del whitelisted[f"{str(ctx.guild.id)}"][0] #This removes the first item in the guild, please suggest a way to fix this.
+      
       with open ('whitelisted.json', 'w') as f: 
         json.dump(whitelisted, f, indent=4)
     
       await ctx.send(f"{user.mention} was successfully unwhitelisted.")
-    except KeyError:
-      await ctx.send("This user was never whitelisted.")
-@client.command()
-async def info(ctx):
-    await ctx.send(embed=discord.Embed(title="Bot info", description=f"{len(client.guilds)} servers, {len(client.users)} users :D"))
+  except KeyError:
+    await ctx.send("This user was never whitelisted, or an error has occured.")
 
-client.run(YOUR_TOKEN)
+client.run(TOKEN)
